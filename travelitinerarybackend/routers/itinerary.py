@@ -1,6 +1,10 @@
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException
 
+from travelitinerarybackend.database import database, itinerary_table
 from travelitinerarybackend.models.itinerary import (
+    SaveItineraryRequest,
     UserItinerary,
     UserItineraryIn,
     calculate_days,
@@ -9,68 +13,163 @@ from travelitinerarybackend.models.itinerary import (
 router = APIRouter()
 
 
-itineraries_table = {}
+def convert_dates_to_strings(record_dict):
+    """Helper function to convert date objects to strings"""
+    if "start_date" in record_dict and record_dict["start_date"]:
+        record_dict["start_date"] = record_dict["start_date"].strftime("%Y-%m-%d")
+    if "end_date" in record_dict and record_dict["end_date"]:
+        record_dict["end_date"] = record_dict["end_date"].strftime("%Y-%m-%d")
+    return record_dict
 
 
 # Save a new itinerary
 @router.post("/itinerary", response_model=UserItinerary)
-async def create_itinerary(user_itinerary: UserItineraryIn):
+async def create_itinerary(request: SaveItineraryRequest):
+    """
+    Save the generated itinerary to database.
+    Called after user approves the generated preview.
+    """
     try:
-        data = user_itinerary.model_dump()
-        new_id = len(itineraries_table) + 1
-        days_count = calculate_days(data["start_date"], data["end_date"])
+        # Convert string dates to Date objects
+        start_date = datetime.strptime(request.start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(request.end_date, "%Y-%m-%d").date()
 
-        new_itinerary = UserItinerary(**data, id=new_id, days_count=days_count)
-        itineraries_table[new_id] = new_itinerary
-        return new_itinerary
+        # Prepare data for database
+        save_data = {
+            "destination": request.destination,
+            "start_date": start_date,
+            "end_date": end_date,
+            "days_count": request.days_count,
+            "interests": request.interests,
+            "generated_itinerary": request.itinerary,
+        }
+
+        # Save to database
+        query = itinerary_table.insert().values(**save_data)
+        last_record_id = await database.execute(query)
+
+        # Fetch the saved record
+        fetch_query = itinerary_table.select().where(
+            itinerary_table.c.id == last_record_id
+        )
+        saved_record = await database.fetch_one(fetch_query)
+
+        # Convert Date objects back to strings for response
+        response_data = dict(saved_record)
+        response_data = convert_dates_to_strings(response_data)
+
+        return response_data
+
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error saving itinerary: {str(e)}")
 
 
 # Get all itineraries
 @router.get("/itinerary", response_model=list[UserItinerary])
 async def get_itineraries():
-    return list(itineraries_table.values())
+    try:
+        query = itinerary_table.select()
+        results = await database.fetch_all(query)
+
+        # Convert Date objects to strings for all records
+        converted_results = []
+        for row in results:
+            row_dict = dict(row)
+            row_dict = convert_dates_to_strings(row_dict)
+            converted_results.append(row_dict)
+
+        return converted_results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 # Delete a saved itinerary
 @router.delete("/itinerary/{id}")
 async def delete_itinerary(id: int):
-    if id not in itineraries_table:
-        raise HTTPException(status_code=404, detail="Itinerary not found")
+    try:
+        # First, check if the record exists
+        check_query = itinerary_table.select().where(itinerary_table.c.id == id)
+        existing_record = await database.fetch_one(check_query)
 
-    deleted_itinerary = itineraries_table.pop(id)
-    return {"message": f"Itinerary {deleted_itinerary} deleted successfully"}
+        if not existing_record:
+            raise HTTPException(status_code=404, detail="Itinerary not found")
+
+        # If exists, delete it
+        delete_query = itinerary_table.delete().where(itinerary_table.c.id == id)
+        await database.execute(delete_query)
+
+        return {"message": f"Itinerary {id} deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-# Modify a saved itinerary
 @router.patch("/itinerary/{id}", response_model=UserItinerary)
 async def update_itinerary(id: int, updates: UserItineraryIn):
-    if id not in itineraries_table:
-        raise HTTPException(status_code=404, detail="Itinerary not found")
-
+    """
+    Update itinerary - always regenerates with new parameters
+    Same input as generate endpoint
+    """
     try:
-        # Update the itinerary with new data
-        update_data = updates.dict()
-        days_count = calculate_days(update_data["start_date"], update_data["end_date"])
+        # Check if exists
+        check_query = itinerary_table.select().where(itinerary_table.c.id == id)
+        existing = await database.fetch_one(check_query)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Itinerary not found")
 
-        updated_itinerary = UserItinerary(**update_data, id=id, days_count=days_count)
-        itineraries_table[id] = updated_itinerary
-        return updated_itinerary
+        # Call generate endpoint with new parameters
+        generated_response = await generate_itinerary(updates)
+
+        # Convert dates for database
+        start_date_obj = datetime.strptime(updates.start_date, "%Y-%m-%d").date()
+        end_date_obj = datetime.strptime(updates.end_date, "%Y-%m-%d").date()
+
+        # Update database with regenerated data
+        update_data = {
+            "destination": updates.destination,
+            "start_date": start_date_obj,
+            "end_date": end_date_obj,
+            "days_count": generated_response["days_count"],
+            "interests": updates.interests,
+            "generated_itinerary": generated_response["itinerary"],
+        }
+
+        update_query = (
+            itinerary_table.update()
+            .where(itinerary_table.c.id == id)
+            .values(**update_data)
+        )
+        await database.execute(update_query)
+
+        # Return updated record
+        fetch_query = itinerary_table.select().where(itinerary_table.c.id == id)
+        updated_record = await database.fetch_one(fetch_query)
+        response_data = dict(updated_record)
+        response_data = convert_dates_to_strings(response_data)
+
+        return response_data
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 # Generate itinerary (placeholder without Gemini)
 @router.post("/itinerary/generate")
 async def generate_itinerary(request: UserItineraryIn):
+    """
+    Generate itinerary for preview - NO database save.
+    User can review before deciding to save.
+    """
     try:
         days_count = calculate_days(request.start_date, request.end_date)
 
-        # simulatee gemini response with hardcoded activities
+        # Generate mock itinerary (replace with Gemini later)
         itinerary = []
         for day in range(1, days_count + 1):
-
             itinerary.append(
                 {
                     "day": day,
@@ -82,10 +181,19 @@ async def generate_itinerary(request: UserItineraryIn):
                 }
             )
 
-        return {"itinerary": itinerary}
+        # Return everything frontend needs for preview AND saving
+        return {
+            "destination": request.destination,
+            "start_date": request.start_date,
+            "end_date": request.end_date,
+            "days_count": days_count,
+            "interests": request.interests,
+            "itinerary": itinerary,
+        }
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error processing request: {str(e)}"
+            status_code=500, detail=f"Error generating itinerary: {str(e)}"
         )
