@@ -1,12 +1,12 @@
 from datetime import datetime
-
 from typing import Optional
+
 from pydantic import BaseModel, field_validator
 
 
-
-
 class UserItineraryIn(BaseModel):
+    """Base model for user input when generating/updating an itinerary"""
+
     destination: str
     start_date: str
     end_date: str
@@ -27,17 +27,29 @@ class UserItineraryIn(BaseModel):
         if info.data and "start_date" in info.data:
             start = datetime.strptime(info.data["start_date"], "%Y-%m-%d").date()
             end = datetime.strptime(v, "%Y-%m-%d").date()
-            if end <= start:
+            if end < start:
                 raise ValueError("End date must be after start date")
         return v
 
 
+class SaveItineraryRequest(UserItineraryIn):
+    """Model for saving generated itinerary to database"""
+
+    days_count: int
+    itinerary: list[dict]  # The generated itinerary data
+
+
 class UserItinerary(UserItineraryIn):
+    """Model for itinerary stored in database"""
+
     id: int
-    days_count: Optional[int] = None
+    days_count: int
+    generated_itinerary: Optional[list[dict]] = None
+    created_at: datetime
 
 
 def calculate_days(start_date_str: str, end_date_str: str) -> int:
+    """Calculate number of days between start and end dates (inclusive)"""
     start = datetime.strptime(start_date_str, "%Y-%m-%d").date()
     end = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-    return (end - start).days + 1  # +1 to include both start and end days
+    return (end - start).days + 1
