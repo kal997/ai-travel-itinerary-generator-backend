@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel, validator
 from typing import Optional
+from pydantic import BaseModel, field_validator
 
 
 
@@ -12,7 +12,8 @@ class UserItineraryIn(BaseModel):
     end_date: str
     interests: list[str]
 
-    @validator("start_date", "end_date")
+    @field_validator("start_date", "end_date")
+    @classmethod
     def validate_date_format(cls, v):
         try:
             datetime.strptime(v, "%Y-%m-%d")
@@ -20,10 +21,11 @@ class UserItineraryIn(BaseModel):
         except ValueError:
             raise ValueError("Date must be in YYYY-MM-DD format")
 
-    @validator("end_date")
-    def validate_end_after_start(cls, v, values):
-        if "start_date" in values:
-            start = datetime.strptime(values["start_date"], "%Y-%m-%d").date()
+    @field_validator("end_date")
+    @classmethod
+    def validate_end_after_start(cls, v, info):
+        if info.data and "start_date" in info.data:
+            start = datetime.strptime(info.data["start_date"], "%Y-%m-%d").date()
             end = datetime.strptime(v, "%Y-%m-%d").date()
             if end <= start:
                 raise ValueError("End date must be after start date")

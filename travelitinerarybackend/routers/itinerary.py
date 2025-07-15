@@ -16,7 +16,7 @@ itineraries_table = {}
 @router.post("/itinerary", response_model=UserItinerary)
 async def create_itinerary(user_itinerary: UserItineraryIn):
     try:
-        data = user_itinerary.dict()
+        data = user_itinerary.model_dump()
         new_id = len(itineraries_table) + 1
         days_count = calculate_days(data["start_date"], data["end_date"])
 
