@@ -14,7 +14,7 @@ async def create_itinerary(
 ) -> dict:
     # the async_client we have configured in conftest
     response = await async_client.post(
-        "/itinerary",
+        "/api/itinerary",
         json={
             "destination": destination,
             "start_date": start_date,
@@ -59,3 +59,19 @@ async def test_create_itinerary(async_client: AsyncClient):
     assert data["start_date"] == "2025-08-01"
     assert data["end_date"] == "2025-08-10"
     assert data["interests"] == ["food", "history"]
+
+
+# test itinerary creation
+@pytest.mark.anyio
+async def test_create_itinerary_missing_body(async_client: AsyncClient):
+    response = await async_client.post("/api/itinerary", json={})
+
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_get_all_itineraries(async_client: AsyncClient, created_itinerary: dict):
+    response = await async_client.get("/api/itinerary")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
