@@ -1,14 +1,19 @@
 # will contains the test fixtures
 
 
+import os
 from typing import AsyncGenerator, Generator
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
+# whenever this module is imported (pytest) change the ENV_STATE to test
+os.environ["ENV_STATE"] = "test"
+from travelitinerarybackend.database import database
+
+# the overwrite has to be before importing app->importing config-> gets test
 from travelitinerarybackend.main import app
-from travelitinerarybackend.routers.itinerary import itineraries_table
 
 
 # fixture to run every pytest session, to define the async platform to be used with async tests (use asyncio)
@@ -30,8 +35,11 @@ def client() -> Generator:
 # it is a fixture because it will be injected in all of the tests, auto use to clean the db
 @pytest.fixture(autouse=True)
 async def db() -> AsyncGenerator:
-    itineraries_table.clear()
+    await database.connect()
     yield
+    await (
+        database.disconnect()
+    )  # will delete everything inside the db because rollback is true
 
 
 # we will use this fixture in all handlers tests
