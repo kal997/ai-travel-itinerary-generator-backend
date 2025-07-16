@@ -10,3 +10,6 @@ python-jose[cryptography]
 argon2-cffi
 python-multipart
 google-cloud-aiplatform
+asgi-correlation-id
+python-json-logger
+rich

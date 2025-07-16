@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -17,6 +18,7 @@ credentials_exception = HTTPException(
     detail="Could not validate credentials",
     headers={"WWW-Authenticate": "Bearer"},
 )
+logger = logging.getLogger(__name__)
 
 
 def access_token_expire_minute():
@@ -24,6 +26,8 @@ def access_token_expire_minute():
 
 
 def create_access_token(email: str):
+    logger.debug(f"Creating access token for email {email}")
+
     expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
         minutes=access_token_expire_minute()
     )
