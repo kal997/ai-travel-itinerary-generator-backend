@@ -3,3 +3,5 @@ __pycache__
 .vscode/
 *.db
 *.pyc
+alembic/__pycache__/
+alembic/versions/__pycache__/
