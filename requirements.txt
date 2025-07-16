@@ -13,3 +13,4 @@ google-cloud-aiplatform
 asgi-correlation-id
 python-json-logger
 rich
+alembic

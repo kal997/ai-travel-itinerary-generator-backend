@@ -3,6 +3,12 @@ import sqlalchemy
 
 from travelitinerarybackend.config import config
 
+engine = sqlalchemy.create_engine(config.DATABASE_URL)
+
+database = databases.Database(
+    config.DATABASE_URL, force_rollback=config.DB_FORCE_ROLL_BACK
+)
+
 metadata = sqlalchemy.MetaData()
 
 user_table = sqlalchemy.Table(
@@ -26,11 +32,4 @@ itinerary_table = sqlalchemy.Table(
     sqlalchemy.Column("interests", sqlalchemy.JSON),  # ["art", "food"]
     sqlalchemy.Column("generated_itinerary", sqlalchemy.JSON),  # Full Gemini response
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=sqlalchemy.func.now()),
-)
-
-engine = sqlalchemy.create_engine(config.DATABASE_URL)
-metadata.create_all(engine)
-
-database = databases.Database(
-    config.DATABASE_URL, force_rollback=config.DB_FORCE_ROLL_BACK
 )
