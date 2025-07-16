@@ -6,3 +6,6 @@ databases[asyncpg]
 psycopg2-binary
 python-dotenv
 pydantic_settings
+python-jose[cryptography]
+argon2-cffi
+python-multipart

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from travelitinerarybackend.database import database
 from travelitinerarybackend.routers.itinerary import router as itinerary_router
+from travelitinerarybackend.routers.user import router as user_router
 
 
 # conext manager to do setup and teardown
@@ -18,3 +19,4 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(itinerary_router, prefix="/api")
+app.include_router(user_router)
