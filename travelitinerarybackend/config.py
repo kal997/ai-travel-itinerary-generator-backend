@@ -19,7 +19,8 @@ class GlobalConfig(BaseConfig):
 
 class DevConfig(GlobalConfig):
     model_config = {"env_file": ".env", "env_prefix": "DEV_", "extra": "ignore"}
-
+    GCP_PROJECT_ID : str
+    GCP_REGION : str
 
 class ProdConfig(GlobalConfig):
     model_config = {"env_file": ".env", "env_prefix": "PROD_", "extra": "ignore"}

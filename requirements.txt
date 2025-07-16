@@ -9,3 +9,4 @@ pydantic_settings
 python-jose[cryptography]
 argon2-cffi
 python-multipart
+google-cloud-aiplatform
