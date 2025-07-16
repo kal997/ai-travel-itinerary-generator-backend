@@ -9,6 +9,7 @@ async def generate_itinerary(
     end_date: str,
     interests: list[str],
     async_client: AsyncClient,
+    logged_in_token: str,
 ) -> dict:
     """Generate itinerary for preview"""
     response = await async_client.post(
@@ -19,6 +20,7 @@ async def generate_itinerary(
             "end_date": end_date,
             "interests": interests,
         },
+        headers={"Authorization": f"Bearer {logged_in_token}"},
     )
     return response.json()
 
@@ -27,36 +29,41 @@ async def generate_itinerary(
 async def save_generated_itinerary(
     generated_data: dict,
     async_client: AsyncClient,
+    logged_in_token: str,
 ) -> dict:
     """Save a generated itinerary to database"""
     response = await async_client.post(
         "/api/itinerary",
         json=generated_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
     )
     return response.json()
 
 
 # Fixture that generates AND saves an itinerary
 @pytest.fixture()
-async def created_itinerary(async_client: AsyncClient) -> dict:
+async def created_itinerary(async_client: AsyncClient, logged_in_token: str) -> dict:
     """Generate and save an itinerary for testing"""
-    # Step 1: Generate
+    # Generate
     generated = await generate_itinerary(
         destination="Paris",
         start_date="2025-08-01",
         end_date="2025-08-10",
         interests=["food", "entertainment"],
         async_client=async_client,
+        logged_in_token=logged_in_token,
     )
 
-    # Step 2: Save
-    saved = await save_generated_itinerary(generated, async_client)
+    # Save
+    saved = await save_generated_itinerary(
+        generated, async_client, logged_in_token=logged_in_token
+    )
     return saved
 
 
 # Test generate endpoint (no save)
 @pytest.mark.anyio
-async def test_generate_itinerary(async_client: AsyncClient):
+async def test_generate_itinerary(async_client: AsyncClient, logged_in_token):
     """Test generating itinerary without saving"""
     user_input = {
         "destination": "Cairo",
@@ -65,7 +72,11 @@ async def test_generate_itinerary(async_client: AsyncClient):
         "interests": ["food", "history"],
     }
 
-    response = await async_client.post("/api/itinerary/generate", json=user_input)
+    response = await async_client.post(
+        "/api/itinerary/generate",
+        json=user_input,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -80,7 +91,7 @@ async def test_generate_itinerary(async_client: AsyncClient):
 
 # Test save endpoint
 @pytest.mark.anyio
-async def test_save_itinerary(async_client: AsyncClient):
+async def test_save_itinerary(async_client: AsyncClient, logged_in_token):
     """Test saving a generated itinerary"""
     # Step 1: Generate
     user_input = {
@@ -91,12 +102,18 @@ async def test_save_itinerary(async_client: AsyncClient):
     }
 
     generate_response = await async_client.post(
-        "/api/itinerary/generate", json=user_input
+        "/api/itinerary/generate",
+        json=user_input,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
     )
     generated_data = generate_response.json()
 
     # Step 2: Save
-    save_response = await async_client.post("/api/itinerary", json=generated_data)
+    save_response = await async_client.post(
+        "/api/itinerary",
+        json=generated_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
 
     assert save_response.status_code == 200
     saved_data = save_response.json()
@@ -112,7 +129,9 @@ async def test_save_itinerary(async_client: AsyncClient):
 
 # Test generate with invalid data
 @pytest.mark.anyio
-async def test_generate_itinerary_invalid_dates(async_client: AsyncClient):
+async def test_generate_itinerary_invalid_dates(
+    async_client: AsyncClient, logged_in_token
+):
     """Test generate with invalid date range"""
     user_input = {
         "destination": "Cairo",
@@ -121,37 +140,55 @@ async def test_generate_itinerary_invalid_dates(async_client: AsyncClient):
         "interests": ["food", "history"],
     }
 
-    response = await async_client.post("/api/itinerary/generate", json=user_input)
+    response = await async_client.post(
+        "/api/itinerary/generate",
+        json=user_input,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert response.status_code == 422  # Pydantic validation error
 
 
 # Test save with missing data
 @pytest.mark.anyio
-async def test_save_itinerary_missing_body(async_client: AsyncClient):
+async def test_save_itinerary_missing_body(async_client: AsyncClient, logged_in_token):
     """Test save with empty body"""
-    response = await async_client.post("/api/itinerary", json={})
+    response = await async_client.post(
+        "/api/itinerary",
+        json={},
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert response.status_code == 422
 
 
 # Test save with incomplete data
 @pytest.mark.anyio
-async def test_save_itinerary_missing_fields(async_client: AsyncClient):
+async def test_save_itinerary_missing_fields(
+    async_client: AsyncClient, logged_in_token
+):
     """Test save with missing required fields"""
     incomplete_data = {
         "destination": "Rome",
         "start_date": "2025-08-01",
         # Missing end_date, days_count, interests, itinerary
     }
-    
-    response = await async_client.post("/api/itinerary", json=incomplete_data)
+
+    response = await async_client.post(
+        "/api/itinerary",
+        json=incomplete_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert response.status_code == 422
 
 
 # Test get all saved itineraries
 @pytest.mark.anyio
-async def test_get_all_itineraries(async_client: AsyncClient, created_itinerary: dict):
+async def test_get_all_itineraries(
+    async_client: AsyncClient, created_itinerary: dict, logged_in_token
+):
     """Test retrieving all saved itineraries"""
-    response = await async_client.get("/api/itinerary")
+    response = await async_client.get(
+        "/api/itinerary", headers={"Authorization": f"Bearer {logged_in_token}"}
+    )
 
     assert response.status_code == 200
     itineraries = response.json()
@@ -162,44 +199,57 @@ async def test_get_all_itineraries(async_client: AsyncClient, created_itinerary:
 
 # Test get all when no itineraries exist
 @pytest.mark.anyio
-async def test_get_all_itineraries_empty(async_client: AsyncClient):
+async def test_get_all_itineraries_empty(async_client: AsyncClient, logged_in_token):
     """Test retrieving itineraries when none exist"""
-    response = await async_client.get("/api/itinerary")
-    
+    response = await async_client.get(
+        "/api/itinerary", headers={"Authorization": f"Bearer {logged_in_token}"}
+    )
+
     assert response.status_code == 200
     assert response.json() == []
 
 
 # Test delete itinerary
 @pytest.mark.anyio
-async def test_delete_itinerary(async_client: AsyncClient, created_itinerary: dict):
+async def test_delete_itinerary(
+    async_client: AsyncClient, created_itinerary: dict, logged_in_token
+):
     """Test deleting a saved itinerary"""
     itinerary_id = created_itinerary["id"]
 
     # Delete
-    delete_response = await async_client.delete(f"/api/itinerary/{itinerary_id}")
+    delete_response = await async_client.delete(
+        f"/api/itinerary/{itinerary_id}",
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert delete_response.status_code == 200
-    
+
     delete_data = delete_response.json()
     assert "message" in delete_data
     assert str(itinerary_id) in delete_data["message"]
 
     # Verify it's gone
-    get_response = await async_client.get("/api/itinerary")
+    get_response = await async_client.get(
+        "/api/itinerary", headers={"Authorization": f"Bearer {logged_in_token}"}
+    )
     assert len(get_response.json()) == 0
 
 
 # Test delete non-existent itinerary
 @pytest.mark.anyio
-async def test_delete_nonexistent_itinerary(async_client: AsyncClient):
+async def test_delete_nonexistent_itinerary(async_client: AsyncClient, logged_in_token):
     """Test deleting an itinerary that doesn't exist"""
-    response = await async_client.delete("/api/itinerary/999")
+    response = await async_client.delete(
+        "/api/itinerary/999", headers={"Authorization": f"Bearer {logged_in_token}"}
+    )
     assert response.status_code == 404
 
 
 # Test update itinerary (always regenerates)
 @pytest.mark.anyio
-async def test_update_itinerary(async_client: AsyncClient, created_itinerary: dict):
+async def test_update_itinerary(
+    async_client: AsyncClient, created_itinerary: dict, logged_in_token
+):
     """Test updating a saved itinerary - should regenerate"""
     itinerary_id = created_itinerary["id"]
 
@@ -213,7 +263,9 @@ async def test_update_itinerary(async_client: AsyncClient, created_itinerary: di
 
     # Update
     update_response = await async_client.patch(
-        f"/api/itinerary/{itinerary_id}", json=new_data
+        f"/api/itinerary/{itinerary_id}",
+        json=new_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
     )
     assert update_response.status_code == 200
 
@@ -223,21 +275,23 @@ async def test_update_itinerary(async_client: AsyncClient, created_itinerary: di
     assert updated_data["interests"] == ["history", "art"]
     assert updated_data["start_date"] == "2025-09-01"
     assert updated_data["end_date"] == "2025-09-05"
-    
+
     # Should have regenerated itinerary
     assert "generated_itinerary" in updated_data
     assert len(updated_data["generated_itinerary"]) == 5  # 5 days
-    
+
     # Verify the ID stayed the same
     assert updated_data["id"] == itinerary_id
 
 
 # Test update with invalid data
 @pytest.mark.anyio
-async def test_update_itinerary_invalid_dates(async_client: AsyncClient, created_itinerary: dict):
+async def test_update_itinerary_invalid_dates(
+    async_client: AsyncClient, created_itinerary: dict, logged_in_token
+):
     """Test updating with invalid date range"""
     itinerary_id = created_itinerary["id"]
-    
+
     invalid_data = {
         "destination": "Rome",
         "start_date": "2025-09-10",  # End before start
@@ -245,13 +299,17 @@ async def test_update_itinerary_invalid_dates(async_client: AsyncClient, created
         "interests": ["history"],
     }
 
-    response = await async_client.patch(f"/api/itinerary/{itinerary_id}", json=invalid_data)
+    response = await async_client.patch(
+        f"/api/itinerary/{itinerary_id}",
+        json=invalid_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert response.status_code == 422  # Pydantic validation error
 
 
 # Test update non-existent itinerary
 @pytest.mark.anyio
-async def test_update_nonexistent_itinerary(async_client: AsyncClient):
+async def test_update_nonexistent_itinerary(async_client: AsyncClient, logged_in_token):
     """Test updating an itinerary that doesn't exist"""
     update_data = {
         "destination": "Rome",
@@ -259,29 +317,39 @@ async def test_update_nonexistent_itinerary(async_client: AsyncClient):
         "end_date": "2025-09-05",
         "interests": ["history"],
     }
-    
-    response = await async_client.patch("/api/itinerary/999", json=update_data)
+
+    response = await async_client.patch(
+        "/api/itinerary/999",
+        json=update_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert response.status_code == 404
 
 
 # Test update with missing fields
 @pytest.mark.anyio
-async def test_update_itinerary_missing_fields(async_client: AsyncClient, created_itinerary: dict):
+async def test_update_itinerary_missing_fields(
+    async_client: AsyncClient, created_itinerary: dict, logged_in_token
+):
     """Test updating with missing required fields"""
     itinerary_id = created_itinerary["id"]
-    
+
     incomplete_data = {
         "destination": "Rome",
         # Missing start_date, end_date, interests
     }
 
-    response = await async_client.patch(f"/api/itinerary/{itinerary_id}", json=incomplete_data)
+    response = await async_client.patch(
+        f"/api/itinerary/{itinerary_id}",
+        json=incomplete_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert response.status_code == 422
 
 
 # Test complete workflow: generate -> save -> update -> delete
 @pytest.mark.anyio
-async def test_complete_workflow(async_client: AsyncClient):
+async def test_complete_workflow(async_client: AsyncClient, logged_in_token):
     """Test the complete itinerary workflow"""
     # Step 1: Generate
     generate_data = {
@@ -290,35 +358,52 @@ async def test_complete_workflow(async_client: AsyncClient):
         "end_date": "2025-10-07",
         "interests": ["culture", "food"],
     }
-    
-    generate_response = await async_client.post("/api/itinerary/generate", json=generate_data)
+
+    generate_response = await async_client.post(
+        "/api/itinerary/generate",
+        json=generate_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert generate_response.status_code == 200
     generated = generate_response.json()
-    
+
     # Step 2: Save
-    save_response = await async_client.post("/api/itinerary", json=generated)
+    save_response = await async_client.post(
+        "/api/itinerary",
+        json=generated,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert save_response.status_code == 200
     saved = save_response.json()
-    
+
     # Step 3: Update
     update_data = {
         "destination": "Kyoto",
-        "start_date": "2025-10-01", 
+        "start_date": "2025-10-01",
         "end_date": "2025-10-05",  # Shorter trip
         "interests": ["temples", "gardens"],
     }
-    
-    update_response = await async_client.patch(f"/api/itinerary/{saved['id']}", json=update_data)
+
+    update_response = await async_client.patch(
+        f"/api/itinerary/{saved['id']}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert update_response.status_code == 200
     updated = update_response.json()
-    
+
     assert updated["destination"] == "Kyoto"
     assert updated["days_count"] == 5  # Regenerated for shorter trip
-    
+
     # Step 4: Delete
-    delete_response = await async_client.delete(f"/api/itinerary/{saved['id']}")
+    delete_response = await async_client.delete(
+        f"/api/itinerary/{saved['id']}",
+        headers={"Authorization": f"Bearer {logged_in_token}"},
+    )
     assert delete_response.status_code == 200
-    
+
     # Verify it's gone
-    get_response = await async_client.get("/api/itinerary")
+    get_response = await async_client.get(
+        "/api/itinerary", headers={"Authorization": f"Bearer {logged_in_token}"}
+    )
     assert len(get_response.json()) == 0

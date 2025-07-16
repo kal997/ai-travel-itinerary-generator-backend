@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from typing_extensions import Annotated
 
 from travelitinerarybackend.database import database, itinerary_table
 from travelitinerarybackend.models.itinerary import (
@@ -9,6 +10,8 @@ from travelitinerarybackend.models.itinerary import (
     UserItineraryIn,
     calculate_days,
 )
+from travelitinerarybackend.models.user import User
+from travelitinerarybackend.security import get_current_user
 
 router = APIRouter()
 
@@ -24,7 +27,10 @@ def convert_dates_to_strings(record_dict):
 
 # Save a new itinerary
 @router.post("/itinerary", response_model=UserItinerary)
-async def create_itinerary(request: SaveItineraryRequest):
+async def create_itinerary(
+    request: SaveItineraryRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Save the generated itinerary to database.
     Called after user approves the generated preview.
@@ -45,7 +51,7 @@ async def create_itinerary(request: SaveItineraryRequest):
         }
 
         # Save to database
-        query = itinerary_table.insert().values(**save_data)
+        query = itinerary_table.insert().values(**save_data, user_id=current_user.id)
         last_record_id = await database.execute(query)
 
         # Fetch the saved record
@@ -66,7 +72,7 @@ async def create_itinerary(request: SaveItineraryRequest):
 
 # Get all itineraries
 @router.get("/itinerary", response_model=list[UserItinerary])
-async def get_itineraries():
+async def get_itineraries(current_user: Annotated[User, Depends(get_current_user)]):
     try:
         query = itinerary_table.select()
         results = await database.fetch_all(query)
@@ -85,7 +91,9 @@ async def get_itineraries():
 
 # Delete a saved itinerary
 @router.delete("/itinerary/{id}")
-async def delete_itinerary(id: int):
+async def delete_itinerary(
+    id: int, current_user: Annotated[User, Depends(get_current_user)]
+):
     try:
         # First, check if the record exists
         check_query = itinerary_table.select().where(itinerary_table.c.id == id)
@@ -107,7 +115,11 @@ async def delete_itinerary(id: int):
 
 
 @router.patch("/itinerary/{id}", response_model=UserItinerary)
-async def update_itinerary(id: int, updates: UserItineraryIn):
+async def update_itinerary(
+    id: int,
+    updates: UserItineraryIn,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Update itinerary - always regenerates with new parameters
     Same input as generate endpoint
@@ -120,7 +132,7 @@ async def update_itinerary(id: int, updates: UserItineraryIn):
             raise HTTPException(status_code=404, detail="Itinerary not found")
 
         # Call generate endpoint with new parameters
-        generated_response = await generate_itinerary(updates)
+        generated_response = await generate_itinerary(updates, current_user)
 
         # Convert dates for database
         start_date_obj = datetime.strptime(updates.start_date, "%Y-%m-%d").date()
@@ -159,7 +171,9 @@ async def update_itinerary(id: int, updates: UserItineraryIn):
 
 # Generate itinerary (placeholder without Gemini)
 @router.post("/itinerary/generate")
-async def generate_itinerary(request: UserItineraryIn):
+async def generate_itinerary(
+    request: UserItineraryIn, current_user: Annotated[User, Depends(get_current_user)]
+):
     """
     Generate itinerary for preview - NO database save.
     User can review before deciding to save.
