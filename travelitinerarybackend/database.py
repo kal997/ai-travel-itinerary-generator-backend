@@ -10,7 +10,6 @@ user_table = sqlalchemy.Table(
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
     sqlalchemy.Column("email", sqlalchemy.String, unique=True),
-    sqlalchemy.Column("username", sqlalchemy.String, unique=True),
     sqlalchemy.Column("password", sqlalchemy.String),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=sqlalchemy.func.now()),
 )
@@ -19,7 +18,7 @@ itinerary_table = sqlalchemy.Table(
     "itineraries",
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
-    sqlalchemy.Column("user_id", sqlalchemy.ForeignKey("users.id"), nullable=True),
+    sqlalchemy.Column("user_id", sqlalchemy.ForeignKey("users.id"), nullable=False),
     sqlalchemy.Column("destination", sqlalchemy.String),
     sqlalchemy.Column("start_date", sqlalchemy.Date),
     sqlalchemy.Column("end_date", sqlalchemy.Date),
