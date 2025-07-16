@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +19,8 @@ from travelitinerarybackend.services.gemini_service import (
 )
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 def convert_dates_to_strings(record_dict):
@@ -67,7 +70,7 @@ async def create_itinerary(
         # Convert Date objects back to strings for response
         response_data = dict(saved_record)
         response_data = convert_dates_to_strings(response_data)
-
+        logger.info(f"Saved itinerary: {response_data}")
         return response_data
 
     except Exception as e:
@@ -173,7 +176,7 @@ async def update_itinerary(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-# Generate itinerary (placeholder without Gemini)
+# Generate itinerary
 @router.post("/itinerary/generate")
 async def generate_itinerary(
     request: UserItineraryIn,

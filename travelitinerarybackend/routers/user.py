@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing_extensions import Annotated
@@ -10,6 +12,8 @@ from travelitinerarybackend.security import (
     get_password_hash,
     get_user,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
