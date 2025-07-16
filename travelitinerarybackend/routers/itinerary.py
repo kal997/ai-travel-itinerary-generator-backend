@@ -12,6 +12,10 @@ from travelitinerarybackend.models.itinerary import (
 )
 from travelitinerarybackend.models.user import User
 from travelitinerarybackend.security import get_current_user
+from travelitinerarybackend.services.gemini_service import (
+    GeminiService,
+    get_gemini_service,
+)
 
 router = APIRouter()
 
@@ -172,7 +176,9 @@ async def update_itinerary(
 # Generate itinerary (placeholder without Gemini)
 @router.post("/itinerary/generate")
 async def generate_itinerary(
-    request: UserItineraryIn, current_user: Annotated[User, Depends(get_current_user)]
+    request: UserItineraryIn,
+    gemini_service: Annotated[GeminiService, Depends(get_gemini_service)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Generate itinerary for preview - NO database save.
@@ -181,29 +187,11 @@ async def generate_itinerary(
     try:
         days_count = calculate_days(request.start_date, request.end_date)
 
-        # Generate mock itinerary (replace with Gemini later)
-        itinerary = []
-        for day in range(1, days_count + 1):
-            itinerary.append(
-                {
-                    "day": day,
-                    "activities": [
-                        "Visit the Louvre",
-                        "Lunch at Le Comptoir",
-                        "Evening Seine cruise",
-                    ],
-                }
-            )
-
-        # Return everything frontend needs for preview AND saving
-        return {
-            "destination": request.destination,
-            "start_date": request.start_date,
-            "end_date": request.end_date,
-            "days_count": days_count,
-            "interests": request.interests,
-            "itinerary": itinerary,
-        }
+        # Generate actual itinerary
+        generated_itinerary = gemini_service.generate_itinerary(
+            request.destination, request.start_date, request.end_date, request.interests
+        )
+        return {"days_count": days_count, "itinerary": generated_itinerary}
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
