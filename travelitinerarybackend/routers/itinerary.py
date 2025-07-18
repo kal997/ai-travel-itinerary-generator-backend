@@ -54,7 +54,7 @@ async def create_itinerary(
             "end_date": end_date,
             "days_count": request.days_count,
             "interests": request.interests,
-            "generated_itinerary": request.itinerary,
+            "generated_itinerary": request.generated_itinerary,
         }
 
         # Save to database
@@ -124,7 +124,7 @@ async def delete_itinerary(
 @router.patch("/itinerary/{id}", response_model=UserItinerary)
 async def update_itinerary(
     id: int,
-    updates: UserItineraryIn,
+    updates: SaveItineraryRequest,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -138,9 +138,6 @@ async def update_itinerary(
         if not existing:
             raise HTTPException(status_code=404, detail="Itinerary not found")
 
-        # Call generate endpoint with new parameters
-        generated_response = await generate_itinerary(updates, current_user)
-
         # Convert dates for database
         start_date_obj = datetime.strptime(updates.start_date, "%Y-%m-%d").date()
         end_date_obj = datetime.strptime(updates.end_date, "%Y-%m-%d").date()
@@ -150,9 +147,10 @@ async def update_itinerary(
             "destination": updates.destination,
             "start_date": start_date_obj,
             "end_date": end_date_obj,
-            "days_count": generated_response["days_count"],
+            "days_count": updates.days_count,
             "interests": updates.interests,
-            "generated_itinerary": generated_response["itinerary"],
+            "generated_itinerary": updates.generated_itinerary,
+            "user_id": current_user.id,
         }
 
         update_query = (
