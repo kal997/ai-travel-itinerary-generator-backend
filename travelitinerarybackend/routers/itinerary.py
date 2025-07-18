@@ -81,7 +81,9 @@ async def create_itinerary(
 @router.get("/itinerary", response_model=list[UserItinerary])
 async def get_itineraries(current_user: Annotated[User, Depends(get_current_user)]):
     try:
-        query = itinerary_table.select()
+        query = itinerary_table.select().where(
+            itinerary_table.c.user_id == current_user.id
+        )
         results = await database.fetch_all(query)
 
         # Convert Date objects to strings for all records
