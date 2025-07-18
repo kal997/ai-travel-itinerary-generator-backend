@@ -39,3 +39,8 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     user = await authenticate_user(form_data.username, form_data.password)
     access_token = create_access_token(user.email)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/health")
+async def health():
+    return {"status": "healthy"}
