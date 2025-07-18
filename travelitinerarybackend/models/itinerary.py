@@ -36,7 +36,7 @@ class SaveItineraryRequest(UserItineraryIn):
     """Model for saving generated itinerary to database"""
 
     days_count: int
-    itinerary: list[dict]  # The generated itinerary data
+    generated_itinerary: list[dict]
 
 
 class UserItinerary(UserItineraryIn):
