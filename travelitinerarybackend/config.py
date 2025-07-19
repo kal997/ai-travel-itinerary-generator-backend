@@ -27,7 +27,9 @@ class ProdConfig(GlobalConfig):
 
 
 class TestConfig(GlobalConfig):
-    model_config = {"env_file": ".env", "env_prefix": "TEST_", "extra": "ignore"}
+    model_config = {"env_file": ".env.test", "env_prefix": "TEST_", "extra": "ignore"}
+    GCP_PROJECT_ID: Optional[str] = None
+    GCP_REGION: Optional[str] = None
 
 
 def get_config(env_state: str):
