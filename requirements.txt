@@ -14,3 +14,4 @@ asgi-correlation-id
 python-json-logger
 rich
 alembic
+passlib[bcrypt]
