@@ -5,15 +5,23 @@ import os
 from typing import AsyncGenerator, Generator
 
 import pytest
+import sqlalchemy
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 # whenever this module is imported (pytest) change the ENV_STATE to test
 os.environ["ENV_STATE"] = "test"
-from travelitinerarybackend.database import database, user_table
+
+from travelitinerarybackend.config import config
+from travelitinerarybackend.database import database, metadata, user_table
 
 # the overwrite has to be before importing app->importing config-> gets test
 from travelitinerarybackend.main import app
+
+# Ensure SQLite file-based DB is created with schema
+if config.DATABASE_URL.startswith("sqlite"):
+    engine = sqlalchemy.create_engine("sqlite:///test.db")
+    metadata.create_all(engine)
 
 
 # fixture to run every pytest session, to define the async platform to be used with async tests (use asyncio)
