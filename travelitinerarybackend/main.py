@@ -31,7 +31,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # React dev server
-        "https://ai-travel-itinerary-gen-app-backend-181459384771.us-central1.run.app",
+        "https://ai-travel-itinerary-gen-app-frontend-181459384771.us-central1.run.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
