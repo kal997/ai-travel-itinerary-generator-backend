@@ -376,24 +376,16 @@ The service uses a structured prompt to generate JSON-formatted itineraries:
 
 ### Current Limitations
 
-1. **No Caching**: Generated itineraries are not cached, leading to API calls for identical requests
-2. **Basic Error Handling**: Gemini API errors could be more gracefully handled
-3. **Limited Validation**: Minimal validation on destination names
-4. **No Pagination**: Itinerary list endpoint returns all records
-
-### Known Issues
-- None
+1. **No Caching**: Generated itineraries are not cached, leading to repeated API calls for identical requests
+2. **No Search/Filter**: Itinerary list lacks search and filtering capabilities
+4. **Single Language**: Currently only supports English responses from Gemini
 
 ### Planned Improvements
 
 - [ ] Implement Redis caching for generated itineraries
-- [ ] Add pagination to list endpoints
-- [ ] Support for collaborative itineraries
-- [ ] Export itineraries to various formats (PDF, iCal)
-- [ ] Multi-language support
-- [ ] Real-time itinerary sharing
-- [ ] Integration with booking APIs
+- [ ] Add search and filtering to itinerary list
 - [ ] Budget estimation features
+- [ ] Trip photo uploads and gallery
 
 ## 🤝 Contributing
 
@@ -425,9 +417,16 @@ For issues and questions:
 
 ## Technology Stack
 
-- **Framework**: FastAPI
+- **Framework**: FastAPI (with automatic OpenAPI/Swagger documentation)
 - **AI Model**: Google Gemini 2.5 Flash (Vertex AI)
-- **Database**: PostgreSQL with SQLAlchemy
-- **Authentication**: JWT with OAuth2
-- **Container**: Docker
+- **Database**: PostgreSQL with SQLAlchemy ORM
+- **Migrations**: Alembic for database schema versioning
+- **Authentication**: JWT with OAuth2 Password Flow
+- **Password Hashing**: Argon2 (industry standard)
+- **Testing**: Pytest with async support and fixtures
+- **API Documentation**: OpenAPI 3.0 specification (auto-generated)
+- **Containerization**: Docker & Docker Compose
 - **Cloud Platform**: Google Cloud Platform (Cloud Run, Vertex AI)
+- **Logging**: Structured JSON logging with correlation IDs
+- **CORS**: FastAPI middleware with configurable origins
+- **Async Support**: Full async/await with asyncpg driver
