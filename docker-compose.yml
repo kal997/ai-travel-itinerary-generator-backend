@@ -29,7 +29,7 @@ services:
       DATABASE_URL: postgresql://travel_user:travel_password@db:5432/travel_itinerary
       GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
     volumes:
-      - /home/khalid/.gcp/vertex-sa.json:/app/credentials.json
+      - ${GCP_KEY_PATH:-./credentials.json}:/app/credentials.json
     env_file:
       - .env
 
