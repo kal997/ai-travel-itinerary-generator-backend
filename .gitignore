@@ -6,3 +6,7 @@ __pycache__
 alembic/__pycache__/
 alembic/versions/__pycache__/
 *.log
+# Docker environment files
+.env.docker
+credentials.json
+secrets/

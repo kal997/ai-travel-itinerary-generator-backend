@@ -102,8 +102,22 @@ travelitinerarybackend/
 
 ### Docker Development Setup
 
-1. **Build and run with Docker Compose**
+1. **Set up environment variables for Docker**
    ```bash
+   # Create Docker environment file
+   echo "GCP_KEY_PATH=/path/to/your/credentials.json" > .env.docker
+   # Or copy the example
+   cp .env.docker.example .env.docker
+   # Edit .env.docker with your GCP key path
+   ```
+
+2. **Build and run with Docker Compose**
+   ```bash
+   # Run with environment file
+   docker-compose --env-file .env.docker up --build
+   
+   # Or export the variable and run
+   export GCP_KEY_PATH=/path/to/your/credentials.json
    docker-compose up --build
    ```
 
@@ -111,7 +125,8 @@ travelitinerarybackend/
    - Start a PostgreSQL database
    - Run database migrations
    - Start the FastAPI application on port 8000
-
+   - Mount your GCP credentials securely
+   
 ## ⚙️ Configuration
 
 ### Environment Variables
