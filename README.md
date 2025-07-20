@@ -401,6 +401,17 @@ The service uses a structured prompt to generate JSON-formatted itineraries:
 - [ ] Add search and filtering to itinerary list
 - [ ] Budget estimation features
 - [ ] Trip photo uploads and gallery
+## 🌐 Live Demo
+
+🟢 **Live Web App**:  
+👉 [https://ai-travel-itinerary-gen-app-frontend-181459384771.us-central1.run.app](https://ai-travel-itinerary-gen-app-frontend-181459384771.us-central1.run.app)
+
+This is the full deployed experience including:
+- React frontend (SPA)
+- FastAPI backend (Cloud Run)
+- Gemini 2.5 Flash AI integration (Vertex AI)
+
+No setup required — ready to explore.
 
 ## 🤝 Contributing
 
